@@ -75,4 +75,64 @@ class RepairServiceTest {
         service.completeOrder(3);
         assertEquals(RepairStatus.COMPLETED, service.findOrder(3).getStatus());
     }
+
+    @Test
+    @DisplayName("Новый заказ можно отменить")
+    void cancelsNewOrder() {
+        Customer customer = new Customer(4, "Иван", "444");
+        Car car = new Car(4, "Toyota", "A004AA77", customer.getId());
+
+        service.createOrder(4, customer, car, "Замена тормозных колодок");
+
+        service.cancelOrder(4);
+
+        assertEquals(
+                RepairStatus.CANCELLED,
+                service.findOrder(4).getStatus()
+        );
+    }
+
+    @Test
+    @DisplayName("Нельзя отменить заказ после начала ремонта")
+    void cannotCancelOrderInProgress() {
+        Customer customer = new Customer(5, "Сергей", "555");
+        Car car = new Car(5, "Ford", "A005AA77", customer.getId());
+
+        service.createOrder(5, customer, car, "Ремонт двигателя");
+        service.changeStatus(5, RepairStatus.IN_PROGRESS);
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> service.cancelOrder(5)
+        );
+
+        assertTrue(
+                exception.getMessage().contains("Отменить можно только новый заказ")
+        );
+
+        assertEquals(
+                RepairStatus.IN_PROGRESS,
+                service.findOrder(5).getStatus()
+        );
+    }
+
+    @Test
+    @DisplayName("Отменённый заказ нельзя отправить в ремонт")
+    void cannotStartCancelledOrder() {
+        Customer customer = new Customer(6, "Елена", "666");
+        Car car = new Car(6, "Honda", "A006AA77", customer.getId());
+
+        service.createOrder(6, customer, car, "Замена аккумулятора");
+        service.cancelOrder(6);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.changeStatus(6, RepairStatus.IN_PROGRESS)
+        );
+
+        assertEquals(
+                RepairStatus.CANCELLED,
+                service.findOrder(6).getStatus()
+        );
+    }
 }

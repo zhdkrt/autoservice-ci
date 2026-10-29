@@ -4,5 +4,6 @@ public enum RepairStatus {
     NEW,
     IN_PROGRESS,
     REPAIRED,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }

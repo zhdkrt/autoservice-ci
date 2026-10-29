@@ -72,6 +72,7 @@ public class Application {
             case IN_PROGRESS -> "IN_PROGRESS (в ремонте)";
             case REPAIRED -> "REPAIRED (ремонт выполнен)";
             case COMPLETED -> "COMPLETED (закрыт)";
+            case CANCELLED -> "CANCELLED (отменён)";
         };
     }
 }

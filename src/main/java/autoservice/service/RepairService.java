@@ -55,6 +55,19 @@ public class RepairService {
         repository.save(order);
     }
 
+    public void cancelOrder(int orderId) {
+        RepairOrder order = requireOrder(orderId);
+
+        if (order.getStatus() != RepairStatus.NEW) {
+            throw new IllegalStateException(
+                    "Отменить можно только новый заказ"
+            );
+        }
+
+        order.setStatus(RepairStatus.CANCELLED);
+        repository.save(order);
+    }
+    
     public RepairOrder findOrder(int orderId) {
         return requireOrder(orderId);
     }
