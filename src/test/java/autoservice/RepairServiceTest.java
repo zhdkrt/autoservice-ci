@@ -87,7 +87,7 @@ class RepairServiceTest {
         service.cancelOrder(4);
 
         assertEquals(
-                RepairStatus.NEW,
+                RepairStatus.CANCELLED,
                 service.findOrder(4).getStatus()
         );
     }
