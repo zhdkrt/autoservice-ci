@@ -5,12 +5,15 @@ import autoservice.model.Customer;
 import autoservice.model.RepairOrder;
 import autoservice.model.RepairStatus;
 import autoservice.repository.InMemoryRepairRepository;
+import autoservice.repository.RepairRepository;
 import autoservice.service.RepairService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,7 +51,8 @@ class RepairServiceTest {
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
-                () -> service.completeOrder(2));
+                () -> service.completeOrder(2)
+        );
 
         assertTrue(exception.getMessage().contains("ремонт ещё не выполнен"));
         assertEquals(RepairStatus.NEW, service.findOrder(2).getStatus());
@@ -62,17 +66,20 @@ class RepairServiceTest {
 
         service.createOrder(3, customer, car, "Покраска бампера");
         service.changeStatus(3, RepairStatus.IN_PROGRESS);
+
         assertEquals(RepairStatus.IN_PROGRESS, service.findOrder(3).getStatus());
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
-                () -> service.completeOrder(3));
+                () -> service.completeOrder(3)
+        );
 
         assertTrue(exception.getMessage().contains("ремонт ещё не выполнен"));
         assertEquals(RepairStatus.IN_PROGRESS, service.findOrder(3).getStatus());
 
         service.changeStatus(3, RepairStatus.REPAIRED);
         service.completeOrder(3);
+
         assertEquals(RepairStatus.COMPLETED, service.findOrder(3).getStatus());
     }
 
@@ -83,7 +90,6 @@ class RepairServiceTest {
         Car car = new Car(4, "Toyota", "A004AA77", customer.getId());
 
         service.createOrder(4, customer, car, "Замена тормозных колодок");
-
         service.cancelOrder(4);
 
         assertEquals(
@@ -134,5 +140,57 @@ class RepairServiceTest {
                 RepairStatus.CANCELLED,
                 service.findOrder(6).getStatus()
         );
+    }
+
+    @Test
+    @DisplayName("WARN: нельзя создать заказ на автомобиль другого клиента")
+    void rejectsCarOwnedByAnotherCustomer() {
+        InMemoryRepairRepository repository = new InMemoryRepairRepository();
+        RepairService localService = new RepairService(repository);
+
+        Customer customer = new Customer(7, "Алексей", "777");
+        Car car = new Car(7, "BMW", "A007AA77", 999);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> localService.createOrder(7, customer, car, "Диагностика")
+        );
+
+        assertTrue(
+                exception.getMessage().contains("Автомобиль не принадлежит этому клиенту")
+        );
+
+        assertNull(repository.findById(7));
+    }
+
+    @Test
+    @DisplayName("ERROR: ошибка сохранения заказа передаётся вызывающему коду")
+    void propagatesRepositorySaveFailure() {
+        IllegalStateException storageFailure =
+                new IllegalStateException("Хранилище заказов недоступно");
+
+        RepairRepository failingRepository = new RepairRepository() {
+            @Override
+            public void save(RepairOrder order) {
+                throw storageFailure;
+            }
+
+            @Override
+            public RepairOrder findById(int id) {
+                return null;
+            }
+        };
+
+        RepairService localService = new RepairService(failingRepository);
+
+        Customer customer = new Customer(8, "Дмитрий", "888");
+        Car car = new Car(8, "Audi", "A008AA77", customer.getId());
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> localService.createOrder(8, customer, car, "Ремонт тормозов")
+        );
+
+        assertSame(storageFailure, exception);
     }
 }

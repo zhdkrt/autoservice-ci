@@ -5,8 +5,12 @@ import autoservice.model.Customer;
 import autoservice.model.RepairOrder;
 import autoservice.model.RepairStatus;
 import autoservice.repository.RepairRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RepairService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RepairService.class);
+
     private final RepairRepository repository;
 
     public RepairService(RepairRepository repository) {
@@ -14,12 +18,42 @@ public class RepairService {
     }
 
     public RepairOrder createOrder(int id, Customer customer, Car car, String description) {
+        LOGGER.info("Начало создания заказа на обслуживание: orderId={}", id);
+
         if (car.getCustomerId() != customer.getId()) {
+            LOGGER.warn(
+                    "Создание заказа отклонено: orderId={}, customerId={}, carId={}, ownerId={}",
+                    id,
+                    customer.getId(),
+                    car.getId(),
+                    car.getCustomerId()
+            );
+
             throw new IllegalArgumentException("Автомобиль не принадлежит этому клиенту");
         }
 
         RepairOrder order = new RepairOrder(id, customer.getId(), car.getId(), description);
-        repository.save(order);
+
+        try {
+            repository.save(order);
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                    "Ошибка сохранения заказа на обслуживание: orderId={}, carId={}",
+                    id,
+                    car.getId(),
+                    exception
+            );
+
+            throw exception;
+        }
+
+        LOGGER.info(
+                "Заказ на обслуживание создан: orderId={}, customerId={}, carId={}",
+                id,
+                customer.getId(),
+                car.getId()
+        );
+
         return order;
     }
 
@@ -67,16 +101,18 @@ public class RepairService {
         order.setStatus(RepairStatus.CANCELLED);
         repository.save(order);
     }
-    
+
     public RepairOrder findOrder(int orderId) {
         return requireOrder(orderId);
     }
 
     private RepairOrder requireOrder(int orderId) {
         RepairOrder order = repository.findById(orderId);
+
         if (order == null) {
             throw new IllegalArgumentException("Заказ не найден: " + orderId);
         }
+
         return order;
     }
 

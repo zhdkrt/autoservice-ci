@@ -1,10 +1,26 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+    }
+
     stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Build') {
             steps {
                 bat '"C:\\Users\\Admin\\apache-maven-3.9.9\\bin\\mvn.cmd" compile'
+            }
+        }
+
+        stage('Static Analysis') {
+            steps {
+                bat '"C:\\Users\\Admin\\apache-maven-3.9.9\\bin\\mvn.cmd" checkstyle:check'
             }
         }
 
