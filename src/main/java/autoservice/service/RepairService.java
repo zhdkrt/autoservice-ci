@@ -109,9 +109,9 @@ public class RepairService {
     private RepairOrder requireOrder(int orderId) {
         RepairOrder order = repository.findById(orderId);
 
-        if (order == null) {
+        if (order == null) 
             throw new IllegalArgumentException("Заказ не найден: " + orderId);
-        }
+        
 
         return order;
     }
