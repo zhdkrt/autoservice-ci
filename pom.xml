@@ -8,7 +8,7 @@
     <artifactId>autoservice</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>Auto Service</name>
-    <description>Автосервис: статический анализ и журналирование</description>
+    <description>Автосервис: статический анализ, журналирование и мониторинг</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,6 +16,7 @@
         <junit.version>5.10.2</junit.version>
         <slf4j.version>2.0.17</slf4j.version>
         <logback.version>1.5.18</logback.version>
+        <micrometer.version>1.14.5</micrometer.version>
     </properties>
 
     <dependencies>
@@ -36,6 +37,18 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <version>${micrometer.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <version>${micrometer.version}</version>
         </dependency>
     </dependencies>
 

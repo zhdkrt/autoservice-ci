@@ -7,6 +7,7 @@ import autoservice.model.RepairStatus;
 import autoservice.repository.InMemoryRepairRepository;
 import autoservice.repository.RepairRepository;
 import autoservice.service.RepairService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -192,5 +193,47 @@ class RepairServiceTest {
         );
 
         assertSame(storageFailure, exception);
+    }
+
+    @Test
+    @DisplayName("Успешное создание заказа увеличивает метрики операций и заказов")
+    void countsSuccessfulOrderCreation() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        RepairService localService = new RepairService(new InMemoryRepairRepository(), registry);
+
+        Customer customer = new Customer(9, "Ольга", "999");
+        Car car = new Car(9, "Skoda", "A009AA77", customer.getId());
+
+        localService.createOrder(9, customer, car, "Замена фильтров");
+
+        assertEquals(1.0, count(registry, "application_operations_total"), 0.001);
+        assertEquals(1.0, count(registry, "application_operations_success_total"), 0.001);
+        assertEquals(0.0, count(registry, "application_operations_error_total"), 0.001);
+        assertEquals(1.0, count(registry, "autoservice_created_orders"), 0.001);
+        assertEquals(1, registry.get("application_operation_duration").timer().count());
+    }
+
+    @Test
+    @DisplayName("Ошибочное создание заказа увеличивает метрику ошибок и не считает заказ")
+    void countsFailedOrderCreation() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        RepairService localService = new RepairService(new InMemoryRepairRepository(), registry);
+
+        Customer customer = new Customer(10, "Никита", "101");
+        Car car = new Car(10, "Mazda", "A010AA77", 999);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> localService.createOrder(10, customer, car, "Диагностика")
+        );
+
+        assertEquals(1.0, count(registry, "application_operations_total"), 0.001);
+        assertEquals(0.0, count(registry, "application_operations_success_total"), 0.001);
+        assertEquals(1.0, count(registry, "application_operations_error_total"), 0.001);
+        assertEquals(0.0, count(registry, "autoservice_created_orders"), 0.001);
+    }
+
+    private static double count(SimpleMeterRegistry registry, String name) {
+        return registry.get(name).counter().count();
     }
 }
